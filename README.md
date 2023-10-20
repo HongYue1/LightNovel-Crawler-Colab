@@ -1,7 +1,7 @@
 # Features
 1. Easy to use and fast with no limit.
 2. The novel can be uploaded to multiple sources
-3. A list of **actually working** sources to save your time from being wasted instead of trying the all supported sources. (WIP)
+3. A list of **actually working** sources to save your time from being wasted instead of trying the all supported sources.
 
 
 # Usage
