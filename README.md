@@ -11,4 +11,4 @@ Click on the "Open in Colab" button.
 # Criedts
 Special thanks to:
 * [dipu-bd/lightnovel-crawler](https://github.com/dipu-bd/lightnovel-crawler) for making the great tool I'm using in this notebook.
-* [m0bb1n/gofilepy](https://github.com/m0bb1n/gofilepy) for Gofile APi wrapper.
+* [m0bb1n/gofilepy](https://github.com/m0bb1n/gofilepy) for Gofile API wrapper.
