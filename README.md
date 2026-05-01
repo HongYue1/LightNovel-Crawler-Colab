@@ -1,5 +1,5 @@
 
-# Temporarily Not working, I will be fixed soon.
+# Temporarily Not working, It will be fixed soon.
 
 # Features
 1. Easy to use and fast with no limit.
