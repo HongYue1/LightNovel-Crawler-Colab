@@ -1,3 +1,6 @@
+
+# Temporary Not working, I will be fixed soon.
+
 # Features
 1. Easy to use and fast with no limit.
 2. The novel can be uploaded to multiple supported hosting sites.
