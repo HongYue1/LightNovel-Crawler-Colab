@@ -623,42 +623,87 @@ def _free_port(preferred=8000):
     return preferred
 
 
+def _wait_up(port, tries=60):
+    for _ in range(tries):
+        try:
+            s = socket.create_connection(("127.0.0.1", port), timeout=0.3)
+            s.close()
+            return True
+        except OSError:
+            time.sleep(0.2)
+    return False
+
+
+def _launch_card(url, env_line):
+    return (
+        '<div style="max-width:520px;margin:14px 0;padding:22px 24px;'
+        'background:#202020;border:1px solid rgba(255,255,255,0.14);border-radius:14px;'
+        'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'
+        'color:#fff;line-height:1.5;">'
+        '<div style="display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;'
+        'letter-spacing:-0.01em;">'
+        '<span style="width:10px;height:10px;border-radius:50%;background:#5e9fe8;'
+        'box-shadow:0 0 0 4px rgba(94,159,232,0.18);"></span>LightNovel Downloader</div>'
+        '<div style="color:rgba(255,255,255,0.45);font-size:12.5px;margin:6px 0 18px;">'
+        + env_line + ' &middot; running</div>'
+        '<a href="' + url + '" target="_blank" rel="noopener" '
+        'style="display:inline-flex;align-items:center;gap:8px;background:#5e9fe8;color:#10243b;'
+        'text-decoration:none;font-weight:650;font-size:14px;padding:11px 20px;border-radius:9px;">'
+        'Open the app &rarr;</a>'
+        '<div style="color:rgba(255,255,255,0.42);font-size:12px;margin-top:14px;">'
+        'Opens in a new browser tab &middot; keep this cell running while you use it.</div>'
+        '</div>'
+    )
+
+
+def _show_launch_ui(port, env_line):
+    try:
+        from IPython.display import display, HTML
+    except Exception:
+        print("LightNovel Downloader running at http://localhost:%d/" % port)
+        return
+    if _in_colab():
+        proxied = None
+        try:
+            from google.colab.output import eval_js
+            proxied = eval_js("google.colab.kernel.proxyPort(%d)" % port)
+        except Exception:
+            proxied = None
+        if proxied:
+            display(HTML(_launch_card(proxied, env_line)))
+            return
+        try:  # fallback: native link, silencing its deprecation warning
+            import contextlib
+            from google.colab import output
+            with open(os.devnull, "w") as dn, contextlib.redirect_stdout(dn), contextlib.redirect_stderr(dn):
+                output.serve_kernel_port_as_window(port, path="/", anchor_text="Open LightNovel Downloader")
+            return
+        except Exception:
+            traceback.print_exc()
+    display(HTML(_launch_card("http://localhost:%d/" % port, env_line)))
+
+
 def main(port=None, max_parallel=3, open_window=True):
-    """Start the server and (in Colab) print a clickable link."""
+    """Start the server and show a clean, clickable launch card."""
     port = port or _free_port(8000)
+
+    # silence Flask/werkzeug startup noise
+    try:
+        import flask.cli
+        flask.cli.show_server_banner = lambda *a, **k: None
+    except Exception:
+        pass
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
     app = create_app(max_parallel=max_parallel)
 
     def _run():
         app.run(host="0.0.0.0", port=port, threaded=True, use_reloader=False, debug=False)
 
     threading.Thread(target=_run, daemon=True).start()
-
-    # wait until the server accepts connections
-    for _ in range(50):
-        try:
-            s = socket.create_connection(("127.0.0.1", port), timeout=0.3)
-            s.close()
-            break
-        except OSError:
-            time.sleep(0.2)
-
-    print("=" * 60)
-    print("  LightNovel Downloader is running.")
-    print("=" * 60)
-    if _in_colab() and open_window:
-        try:
-            from google.colab import output
-            print("Click the link below to open it in a new tab:")
-            output.serve_kernel_port_as_window(port, path="/")
-            print("\nTip: if nothing opens, allow pop-ups for colab, or use:")
-            print("     from google.colab import output")
-            print("     output.serve_kernel_port_as_iframe(%d)" % port)
-        except Exception:
-            traceback.print_exc()
-            print("Open http://localhost:%d" % port)
-    else:
-        print("Open http://localhost:%d in your browser." % port)
-    return app
+    _wait_up(port)
+    _show_launch_ui(port, app.config["LND_MANAGER"].env_line())
+    return None
 
 
 # --------------------------------------------------------------------------- #
