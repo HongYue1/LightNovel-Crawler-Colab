@@ -1,0 +1,3 @@
+lightnovel-crawler==4.10.0
+flask>=2.2
+gofilepy-api
