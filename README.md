@@ -41,7 +41,7 @@ The original setup used the built-in lightnovel-crawler web server. It is kept a
 
 ## Notes
 
-- Chrome is only needed for sources that require a browser, such as readnovelfull. It is installed automatically on the first run.
+- Downloading multiple novels at once works best when each comes from a different website. Novels from the same site share its rate limit, so running them together gives no speed benefit and can get the Colab IP banned.
 - Thread control is unreliable. Many sources rate limit or override the value, and pushing it high tends to cause failed chapters or bans. Leave it on the source default, and only raise it to a low value (8 at most) if you really need to. The default depends on the source (lightnovel-crawler uses 5 as its base, and some sources set it lower).
 - A source being listed as working does not mean it has the novel you want, or that the novel is complete on that source. Always check the chapter count while downloading.
 
