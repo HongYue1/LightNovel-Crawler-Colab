@@ -198,7 +198,10 @@ class Job:
                 pass
             self.threads_effective = self.opts["threads"]
         else:
-            self.threads_effective = getattr(crawler, "workers", None) or 4
+            try:
+                self.threads_effective = crawler.taskman.workers
+            except Exception:
+                self.threads_effective = None
 
         # Fresh start: lncrawl persists every downloaded chapter per novel and
         # its binder bundles ALL of them. Remove any prior copy of this novel so
@@ -238,13 +241,22 @@ class Job:
     def _download_phase(self):
         ctx = self.manager.ctx
         executor = self.crawler.taskman
-        max_inflight = max(1, self.threads_effective or 4)
+        # Clear any abort signal left over from a previous pause/cancel so the
+        # new requests are not interrupted the moment they start.
+        try:
+            self.crawler.scraper.signal.clear()
+        except Exception:
+            pass
+        max_inflight = max(1, self.threads_effective or 5)
         pending = list(self.pending)
         i = 0
         inflight = {}
 
         while i < len(pending) or inflight:
-            if self._cancel.is_set():
+            # React to pause/cancel immediately: abandon in-flight requests
+            # instead of waiting for them to drain (that is what felt slow, and
+            # got slower with more threads).
+            if self._cancel.is_set() or self._pause.is_set():
                 self._abort_inflight(inflight)
                 break
             while (
@@ -264,12 +276,9 @@ class Job:
                 inflight[fut] = cid
 
             if not inflight:
-                if self._pause.is_set():
-                    self.pending = [c for c in self._selected_ids if c not in self._done_ids]
-                    return False
                 break
 
-            done, _ = wait(list(inflight.keys()), timeout=0.4, return_when=FIRST_COMPLETED)
+            done, _ = wait(list(inflight.keys()), timeout=0.3, return_when=FIRST_COMPLETED)
             for fut in done:
                 cid = inflight.pop(fut)
                 try:
@@ -281,21 +290,22 @@ class Job:
                     self.failed = len(self._failed_ids)
 
         self.pending = [c for c in self._selected_ids if c not in self._done_ids]
-        if self._cancel.is_set() or self._pause.is_set():
-            return False
-        return True
+        return not (self._cancel.is_set() or self._pause.is_set())
 
     def _abort_inflight(self, inflight):
+        # Ask in-flight network requests to stop and cancel anything still
+        # queued, but do NOT block waiting for running tasks. Abandoned chapter
+        # fetches are idempotent: they are re-fetched on resume (fetch_chapter
+        # skips finished chapters) or discarded when the job is closed.
         try:
             self.crawler.scraper.signal.set()
         except Exception:
             pass
-        if inflight:
-            wait(list(inflight.keys()))
         try:
-            self.crawler.scraper.signal.clear()
+            self.crawler.taskman.cancel_futures(list(inflight.keys()))
         except Exception:
             pass
+        inflight.clear()
 
     def _images_phase(self):
         ctx = self.manager.ctx
