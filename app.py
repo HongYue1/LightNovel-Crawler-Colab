@@ -651,7 +651,7 @@ def _launch_card(url, env_line):
         'text-decoration:none;font-weight:650;font-size:14px;padding:11px 20px;border-radius:9px;">'
         'Open the app &rarr;</a>'
         '<div style="color:rgba(255,255,255,0.42);font-size:12px;margin-top:14px;">'
-        'Opens in a new browser tab &middot; keep this cell running while you use it.</div>'
+        'Opens in a new browser tab &middot; keep this browser tab open while you use it.</div>'
         '</div>'
     )
 
